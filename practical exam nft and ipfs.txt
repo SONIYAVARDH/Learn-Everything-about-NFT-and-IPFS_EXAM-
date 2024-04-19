@@ -1,0 +1,71 @@
+Q.1)-write a Solidity Smart Contract For a Non-Fungible Token(NFT) called Virtual Land NFT which signifies a Virtual Land in Metaverse.
+ans: Virtual Land NFT for Metaverse:
+          This is a Solidity Smart Contract For a Non-Fungible Token(NFT) called Virtual Land NFT which signifies a Virtual Land in Metaverse.
+          It is based on the ERC-721 standard, which is used for creating unique, indivisible assets.
+          The key functionalities that are used in this Smart Contract as follows:
+          -> The mintLand function allows users to create a new  virtual land token by specifying its name, price and image URL.
+          -> The setVirtualLandForSale function allows the owner of a token to put it up for sale, by setting its "forSale" property to true.
+          -> The purchaseVirtualLand function allows user to buy a virtual land token that is currently for sale, by transferring the appropriate amount of Ether to the seller and transferring ownership of the token to the buyer.
+          -> The getVirtualLandDetails function allows anyone to retrieve the details of a virtual land token, given its ID. This function returns the VirtualLand struct associated with the token ID.
+
+ SMART CONTRACT FOR VIRTUALLANDNFT:
+
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
+import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import "@openzeppelin/contracts/utils/Counters.sol";
+
+
+contract VirtualLandNFT is ERC721 {
+    using Counters for Counters.Counter;
+    Counters.Counter private _tokenIdCounter;
+
+    uint public constant MAX_SUPPLY = 100;
+
+    struct VirtualLand {
+        string name;
+        address owner;
+        uint price;
+        string imageURL;
+        bool forSale;
+    }
+
+    mapping(uint => VirtualLand) public virtualLands;
+
+    constructor() ERC721("VirtualLandNFT", "VLNFT") {}
+
+    function mintLand(string memory _name, uint _price, string memory _imageURL) public {
+        _tokenIdCounter.increment();
+        uint tokenId = _tokenIdCounter.current();
+
+        require(tokenId <= MAX_SUPPLY, "The supply is limited");
+
+        _safeMint(msg.sender, tokenId);
+        virtualLands[tokenId] = VirtualLand(_name, msg.sender, _price, _imageURL, false);
+    }
+
+    function setVirtualLandForSale(uint tokenId) external {
+        require(ownerOf(tokenId) == msg.sender, "Only owner can set for sale");
+        virtualLands[tokenId].forSale = true;
+    }
+
+    function purchaseVirtualLand(uint tokenId) external payable {
+        VirtualLand storage virtualLand = virtualLands[tokenId];
+
+        require(virtualLand.forSale, "Land not for sale");
+        require(msg.value >= virtualLand.price, "Insufficient balance");
+
+        address previousOwner = virtualLand.owner;
+        virtualLand.owner = msg.sender;
+        virtualLand.forSale = false;
+
+        payable(previousOwner).transfer(virtualLand.price);
+        _transfer(previousOwner, msg.sender, tokenId);
+    }
+
+    function getVirtualLandDetails(uint tokenId) public view returns (string memory, address, uint, string memory, bool) {
+        VirtualLand memory land = virtualLands[tokenId];
+        return (land.name, land.owner, land.price, land.imageURL, land.forSale);
+    }
+}
